@@ -35,3 +35,10 @@ Immersive Acoustic Spatial Awareness System
 * Individual beeps are placed in "..FINAL EDITS/" for 200Hz and "..FINAL EDITS 130HZ/" FOR 130 Hz.
 * Individual file name follows "<number for degree> DEG.mp3" -- for example "FINAL EDITS/20 DEG.mp3" for a beep at 20 Deg with bass as 200Hz.
 * Create an empty folder '/spec-sounds/' before you start anything.
+  
+  
+  Made with :blue_heart: by Nocturnals
+  
+__author__ = "Team Nocturnals: Ahmed N., Polamaina S., Malick S."
+__copyright__ = "Copyright (C) 2019 Nocturnals"
+__version__ = "1.0"
