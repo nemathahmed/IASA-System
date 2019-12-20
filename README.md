@@ -20,6 +20,7 @@ Immersive Acoustic Spatial Awareness System
 ### Darflow Installation
 * Translate darknet to tensorflow. Load trained weights, retrain/fine-tune using tensorflow, export constant graph def to mobile devices.
 * Instruction to installation- https://github.com/thtrieu/darkflow
+* YOLO weights from- https://drive.google.com/drive/folders/0B1tW_VtY7onidEwyQ2FtQVplWEU.
 
 ## Usage Guide
 ### Few important things:
