@@ -16,7 +16,7 @@ Immersive Acoustic Spatial Awareness System
 *  cmake==3.15.3
 *  pyserial==3.4
 
-
+** we recommend using anaconda
 ### Darflow Installation
 * Translate darknet to tensorflow. Load trained weights, retrain/fine-tune using tensorflow, export constant graph def to mobile devices.
 * Instruction to installation- https://github.com/thtrieu/darkflow
