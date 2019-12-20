@@ -39,6 +39,6 @@ Immersive Acoustic Spatial Awareness System
   
   Made with :blue_heart: by Nocturnals
   
-__author__ = "Team Nocturnals: Ahmed N., Polamaina S., Malick S."
-__copyright__ = "Copyright (C) 2019 Nocturnals"
-__version__ = "1.0"
+* __author__ = "Team Nocturnals: Ahmed N., Polamaina S., Malick S."
+* __copyright__ = "Copyright :copyright: 2019 Nocturnals"
+* __version__ = "1.0"
