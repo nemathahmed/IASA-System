@@ -1,9 +1,3 @@
-# Copyright Info
-__author__ = "Team Nocturnals: Ahmed N., Polamaina S., Malick S."
-__copyright__ = "Copyright (C) 2019 Nocturnals"
-__license__ = "Public Domain"
-__version__ = "1.0"
-
 #Library Requirements
 from __future__ import print_function
 import darkflow
@@ -27,11 +21,17 @@ import os, winsound, subprocess,turtle
 from threading import Thread                                                                  
 from multiprocessing import Pool
 processes = ('arc.py')
+# Copyright Info
+__author__ = "Team Nocturnals: Ahmed N., Polamaina S., Malick S."
+__copyright__ = "Copyright (C) 2019 Nocturnals"
+__license__ = "Public Domain"
+__version__ = "1.0"
 
 #Few important things:
 #1. A zone is the area in which the the obstacle might be located. Since we are using a 12 sensor array, we have divided the whole space into 12 zones spanning 10 degrees each.
 #2. Place the yolo model config file in darkflow/cfg as shown below
 #3. Input from the sensor is top-level i.e. even if YOLO Object detection misses on someitems detected by array, it is represented by a beep 
+
 options = {"model": "darkflow/cfg/yolo.cfg", 
            "load": "bin/yolo.weights", 
            "threshold": 0.1, 
@@ -48,6 +48,19 @@ class my_dictionary(dict):
     # Function to add key:value 
     def add(self, key, value): 
         self[key] = value        
+def receiving(ser):
+    global last_received
+
+    buffer_string = ''
+    while True:
+        buffer_string = buffer_string + ser.read(ser.inWaiting())
+        if '\n' in buffer_string:
+            lines = buffer_string.split('\n') # Guaranteed to have at least 2 entries
+            last_received = lines[-2]
+            #If the Arduino sends lots of empty lines, you'll lose the
+            #last filled line, so you could make the above statement conditional
+            #like so: if lines[-2]: last_received = lines[-2]
+            buffer_string = lines[-1]
 def defaultdict():
     temp=my_dictionary()
     for i in range(12):
@@ -60,31 +73,36 @@ def getangles():
     return arr[0],arr[1:len(arr)]
 #combine sounds to get a spatial map with base as 200Hz | mode-near
 def combine(arr):
-    print(arr,'yes')
-    print("E:/Computer Vision/SoundLocalize/FINAL EDITS/"+"BASE.mp3")
+
+    print(arr,'ready to combine!!')
+    #print("E:/Computer Vision/SoundLocalize/FINAL EDITS/"+"BASE.mp3")
     soundbase=AudioSegment.from_mp3("E:/Computer Vision/SoundLocalize/FINAL EDITS/"+str(arr[0])+" DEG.mp3")
 
     for i in range(0,len(arr)):
-        print("E:/Computer Vision/SoundLocalize/FINAL EDITS/"+str(arr[i])+" DEG.mp3")
+        #print("E:/Computer Vision/SoundLocalize/FINAL EDITS/"+str(arr[i])+" DEG.mp3")
         sound1 = AudioSegment.from_mp3("E:/Computer Vision/SoundLocalize/FINAL EDITS/"+str(arr[i])+" DEG.mp3")
         soundbase = soundbase.overlay(sound1)
+    
+    print('Done Combining')
     return soundbase
 #combine sounds to get a spatial map with base as 130Hz | mode-near
 def combine_1(arr):
-    print(arr,'yes')
-    print("E:/Computer Vision/SoundLocalize/FINAL EDITS 130 HZ/BASE.mp3")
+    print(arr,'ready to combine!!')
+    #print("E:/Computer Vision/SoundLocalize/FINAL EDITS 130 HZ/BASE.mp3")
     soundbase=AudioSegment.from_mp3("E:/Computer Vision/SoundLocalize/FINAL EDITS 130 HZ/BASE.mp3")
 
     for i in range(0,len(arr)):
-        print("E:/Computer Vision/SoundLocalize/FINAL EDITS 130 HZ/"+str(arr[i])+" DEG.mp3")
+        #print("E:/Computer Vision/SoundLocalize/FINAL EDITS 130 HZ/"+str(arr[i])+" DEG.mp3")
         sound1 = AudioSegment.from_mp3("E:/Computer Vision/SoundLocalize/FINAL EDITS 130 HZ/"+str(arr[i])+" DEG.mp3")
         soundbase = soundbase.overlay(sound1)
+    print('Done Combining')
     return soundbase
 #Export the final sound as finalmusic.wav
 def export(soundfinal):
     soundfinal.export("finalmusic.wav", format='wav')
 #Starughtforward playing of sound
 def play_sound():
+    print('Now Playing')
     winsound.PlaySound("finalmusic.wav", winsound.SND_ALIAS)
 #YOLO for object detection multi layer Layer convnet
 def obstacledetection():
@@ -231,6 +249,89 @@ def obstacledetection():
     out.release()
     cv2.destroyAllWindows()     
 #Generating a complete 3D map without any relation to zonal array 
+def obstacledetectionforsensor(sensorinputarray):
+    print('VP| Few moments..........')
+    #cap = cv2.VideoCapture('rtsp://10.2.89.128:8080/h264_ulaw.sdp')
+    #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)   
+    #height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT) 
+
+    #fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+    #out = cv2.VideoWriter('./sample_video/output.avi',fourcc, 20.0, (int(width), int(height)))
+    print('VP| Ready Now!')
+
+    while(True):
+        cap = cv2.VideoCapture('rtsp://10.2.89.128:8080/h264_ulaw.sdp')
+        files = glob.glob('spec-sounds/*')
+        for f in files:
+           
+            os.remove(f)
+        
+        
+       
+        
+        print('Input any number to start an iteration')
+        p=int(input())
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        
+        if ret == True:
+            
+            frame = np.asarray(frame)
+            results = tfnet.return_predict(frame)
+
+            arr=[]
+            points=[]
+            print('VP| Analyzing')
+            
+            # Display the resulting frame
+            total_object=len(results)
+            ilen=1
+            final=defaultdict()
+            for result in results:
+                print('Processed ',(ilen/total_object)*100,'%', end="\r")
+                ilen=ilen+1
+            
+                arr.append(result['label'])
+                tl,br = (result['topleft']['x'],result['bottomright']['x'])
+                points.append((tl+br)/2)
+                zone=int(((tl+br)/2)/160)
+                final[zone]= result['label']
+                #print(result['label'],zone)
+                
+            od = collections.OrderedDict(sorted(final.items()))
+            print('VP| ',od)
+            #print(arr)
+            print('VP| Analyzed!!')
+
+            for key in od:
+                areaindeg=key*10-60
+                if(areaindeg<0):
+                    Name=str(od[key]) #+'at negative'+ str(areaindeg)
+                else:
+                    Name=str(od[key]) #+'at positive'+ str(areaindeg)
+
+                myobj = gTTS(text=Name, lang='en', slow=False)
+                if od[key]=='None':
+                    #Name1='No object' 
+                    #sil = gTTS(text=Name1, lang='en', slow=False)
+                    #sil.save('spec-sounds/'+str(key)+'.mp3')
+                    continue
+                else:
+                    myobj.save('spec-sounds/'+str(key)+'.mp3')
+                #song = AudioSegment.from_mp3("myjarvissound.mp3")
+                #play(song)
+            withobstaclearraydetector(sensorinputarray)   
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+
+    # When everything done, release the capture
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+      
+#Generating a complete 3D map without any re
+
 def noarrayobstacledetector():
     base=AudioSegment.from_mp3("BASE.mp3")
     base.export('mode2-3dvision.mp3',format='mp3')
@@ -289,26 +390,43 @@ def noarrayobstacledetector(zonalarray):
     #base.export('mode2-3dvision.mp3',format='mp3')
     song = AudioSegment.from_mp3("mode2-3dvision.mp3")
     play(song)
-#Generating 3D map taking direct zonal information from sensorarray
+#Generating 3D map taking direct zonal information from sensorarray | marr is the received array
 def withobstaclearraydetector(marr):
     base=AudioSegment.from_mp3("BASE.mp3")
-    time=2495
-    sound=AudioSegment.from_mp3('spec-sounds/' +str(marr[0])+ '.mp3')
-    base=base.overlay(sound,time)
-
-    for i in marr[1:]:
-        time=time+208
-        sound=AudioSegment.from_mp3('spec-sounds/' +str(i)+ '.mp3')
-        base=base.overlay(sound,position=time)
     base.export('mode2-3dvision.mp3',format='mp3')
+    #time=2495
+    time=0
+    #sound=AudioSegment.from_mp3('spec-sounds/' +str(0)+'.mp3')
+    #base=base.overlay(sound,position=time)
+
+    for i in range(0,12):
+        try:
+            if (i in marr):
+                sound=AudioSegment.from_mp3('spec-sounds/' + str(i)+ '.mp3')
+                base=base.overlay(sound,position=time)
+                base.export('mode2-3dvision.mp3',format='mp3')
+                base=AudioSegment.from_mp3('mode2-3dvision.mp3')
+                time=time+1000
+            else:
+                
+                    
+                time=time+1000
+                continue
+        
+        except FileNotFoundError:
+            if(i in marr):
+                    sound1=AudioSegment.from_wav('beep.wav')
+                    base=base.overlay(sound1,position=i*1000)
+                    base.export('mode2-3dvision.mp3',format='mp3')
+                    base=AudioSegment.from_mp3('mode2-3dvision.mp3')
+            time=time+1000
+            continue
     song = AudioSegment.from_mp3("mode2-3dvision.mp3")
     play(song)
-
 #Main Program
 print('Ready Now!')
 while True:
     print('Input 0 for obstacle-detection info and 1 for obstacle-identification(detailed) info')
-    turtle.bye()
     detection_or_identification=int(input())
     if(detection_or_identification==0):
         print('Input 1 if connected with the sensor array')
@@ -317,17 +435,21 @@ while True:
             #COM is the COM port being used with Arduino Mega
             COM = 'COM3'
             BAUD = 9600 #Baud rate!
-
-            ser = serial.Serial(COM, BAUD, timeout = 0.1)
+            val=''
+            ser = serial.Serial(COM, timeout=None, baudrate=9600, xonxoff=False, rtscts=False, dsrdtr=False)
 
             print("Waiting for device")
-            sleep(12)
+            #sleep(12)
             print(ser.name)
             try:
-                val = str(ser.readline().decode().strip("\r\n"))
-               
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                
             except UnicodeDecodeError:
-                print("uh oh")
+                print("Array Error")
             
             try:
                 arr=[]
@@ -343,7 +465,7 @@ while True:
                 finalarr.append(0)
                 for j in range(len(arr)):
                     if int(arr[j])==0:
-                        finalarr.append(-60+10*(j+1))
+                        finalarr.append(-60+10*(j))
                 print(finalarr, end = "\n", flush = True)
                 mode,angle_arr=0,finalarr[1:len(finalarr)]
                 print(mode,angle_arr)
@@ -426,26 +548,28 @@ while True:
             
                 angle=angle+1
             turtle.bye()
-            ''''
+            '''
     if(detection_or_identification==1):
         print('Do you have sensor array| 1 for yes 0 for no')
         doihavearray=int(input())
         if(doihavearray==1):
-            obstacledetection()
             COM = 'COM3'
-            BAUD = 9600
-
-            ser = serial.Serial(COM, BAUD, timeout = 0.1)
+            BAUD = 9600 #Baud rate!
+            val=''
+            ser = serial.Serial(COM, timeout=None, baudrate=9600, xonxoff=False, rtscts=False, dsrdtr=False)
 
             print("Waiting for device")
-            sleep(3)
+            #sleep(12)
             print(ser.name)
             try:
-                val = str(ser.readline().decode().strip("\r\n"))
-                #val = str(ser.readline())
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                val = str(ser.readline().decode('utf-8','ignore').strip("\r\n"))
+                
             except UnicodeDecodeError:
-                print("uh oh")
-            #valA = val.split("/")
+                print("Array Error")
             try:
                 arr=[]
                 val=list(val)
@@ -458,10 +582,15 @@ while True:
                 for j in range(len(arr)):
                     if int(arr[j])==0:
                         
-                        finalarr.append(-60+10*(j+1))
+                        finalarr.append(-60+10*(j))
                 print(finalarr, end = "\n", flush = True)
                 mode,angle_arr=0,finalarr[1:len(arr)]
                 print(mode,angle_arr)
+                arr_int=[]
+                for i in range(len(angle_arr)):
+                    arr_int.append(int((int(angle_arr[i])+60)/10))
+                print(arr_int)
+                '''
                 if int(mode)==0:
                     final=combine(angle_arr)
                     export(final)
@@ -472,12 +601,12 @@ while True:
                 for i in range(len(angle_arr)):
                     arr_int.append(int(angle_arr[i]))
             
-                for i in range(1):
-                    thread = Thread(target=obstacledetection)
-                    thread.start()
+                #for i in range(1):
+                #    thread = Thread(target=obstacledetection)
+                #    thread.start()
+                '''
 
-
-                withobstaclearraydetector(arr_int)
+                obstacledetectionforsensor(arr_int)
             
                 '''
                 radius=300
